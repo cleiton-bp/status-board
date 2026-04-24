@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <title>API Live Monitor</title>
+    <style>
+      /* Variáveis de Tema */
+      :root {
+        --bg-color: #0f172a;
+        --card-bg: #1e293b;
+        --text-main: #f8fafc;
+        --text-muted: #94a3b8;
+        --border-color: #334155;
+        --btn-bg: #334155;
+      }
+
+      .light-mode {
+        --bg-color: #f1f5f9;
+        --card-bg: #ffffff;
+        --text-main: #1e293b;
+        --text-muted: #64748b;
+        --border-color: #e2e8f0;
+        --btn-bg: #e2e8f0;
+      }
+
+      body {
+        font-family: "Segoe UI", system-ui, sans-serif;
+        background-color: var(--bg-color);
+        color: var(--text-main);
+        display: flex;
+        justify-content: center;
+        padding: 40px 20px;
+        margin: 0;
+        transition:
+          background-color 0.3s,
+          color 0.3s;
+      }
+
+      .container {
+        width: 100%;
+        max-width: 450px;
+      }
+
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+      }
+
+      h1 {
+        font-size: 1.5rem;
+        margin: 0;
+      }
+      p {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        margin-top: 5px;
+      }
+
+      #theme-toggle {
+        background: var(--btn-bg);
+        border: none;
+        padding: 10px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 1.2rem;
+        transition: transform 0.2s;
+      }
+      #theme-toggle:hover {
+        transform: scale(1.05);
+      }
+
+      .card {
+        background-color: var(--card-bg);
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      }
+
+      #log-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+
+      .log-entry {
+        display: flex;
+        align-items: center;
+        padding: 12px 0;
+        border-bottom: 1px solid var(--border-color);
+        animation: slideIn 0.3s ease-out;
+      }
+
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 12px;
+      }
+      .success {
+        background-color: #22c55e;
+        box-shadow: 0 0 8px #22c55e;
+      }
+      .error {
+        background-color: #ef4444;
+        box-shadow: 0 0 8px #ef4444;
+      }
+
+      .time {
+        font-family: monospace;
+        color: var(--text-muted);
+        margin-right: 10px;
+        font-size: 0.85rem;
+      }
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <div>
+          <h1>Monitor de API</h1>
+          <p>Status em tempo real</p>
+        </div>
+        <button id="theme-toggle" aria-label="Alternar tema">🌙</button>
+      </header>
+
+      <div class="card">
+        <ul id="log-list"></ul>
+      </div>
+    </div>
+
+    <script>
+      const apis = [
+        {
+          name: "API de idiomas",
+          url: "https://linguaflow-studio-api.onrender.com/api/Auth/test",
+          interval: 15000, // 15s
+        },
+        // {
+        //   name: "nomedasuaapi.com",
+        //   url: "https://nomedasuaapi.com/health",
+        //   interval: 15000, // tempo em milessegundos exemplo: 15000 = 15 segundos
+        // }
+      ];
+
+      const logList = document.getElementById("log-list");
+      const themeToggle = document.getElementById("theme-toggle");
+
+      let activeApiIndex = 0;
+      const logs = {};
+
+      // TABS
+      const tabContainer = document.createElement("div");
+      tabContainer.style.display = "flex";
+      tabContainer.style.gap = "8px";
+      tabContainer.style.marginBottom = "15px";
+
+      document.querySelector(".card").prepend(tabContainer);
+
+      apis.forEach((api, index) => {
+        logs[index] = [];
+
+        const btn = document.createElement("button");
+        btn.textContent = api.name;
+        btn.style.padding = "6px 10px";
+        btn.style.borderRadius = "8px";
+        btn.style.border = "none";
+        btn.style.cursor = "pointer";
+        btn.style.background = "var(--btn-bg)";
+
+        btn.onclick = () => {
+          activeApiIndex = index;
+          renderLogs();
+        };
+
+        tabContainer.appendChild(btn);
+      });
+
+      // TEMA
+      const currentTheme = localStorage.getItem("theme") || "dark";
+      if (currentTheme === "light") document.body.classList.add("light-mode");
+      themeToggle.textContent = currentTheme === "light" ? "☀️" : "🌙";
+
+      themeToggle.addEventListener("click", () => {
+        document.body.classList.toggle("light-mode");
+        const isLight = document.body.classList.contains("light-mode");
+        localStorage.setItem("theme", isLight ? "light" : "dark");
+        themeToggle.textContent = isLight ? "☀️" : "🌙";
+      });
+
+      // RENDER LOG
+      function renderLogs() {
+        logList.innerHTML = "";
+        logs[activeApiIndex].forEach((entry) => {
+          const li = document.createElement("li");
+          li.className = "log-entry";
+          li.innerHTML = entry;
+          logList.appendChild(li);
+        });
+      }
+
+      // REQUEST
+      async function fazerRequisicao(api, index) {
+        const timestamp = new Date().toLocaleTimeString();
+        let statusClass = "error";
+        let message = "Offline";
+
+        try {
+          const inicio = performance.now();
+
+          const response = await fetch(api.url, {
+            method: "GET",
+            headers: { accept: "*/*" },
+          });
+
+          const fim = performance.now();
+          const tempo = Math.round(fim - inicio);
+
+          if (response.ok) {
+            statusClass = "success";
+            message = `Online (${response.status}) - ${tempo}ms`;
+          } else {
+            message = `Erro ${response.status}`;
+          }
+        } catch (e) {
+          message = "Sem conexão";
+        }
+
+        const html = `
+      <div class="status-dot ${statusClass}"></div>
+      <span class="time">${timestamp}</span>
+      <span>${message}</span>
+    `;
+
+        logs[index].unshift(html);
+
+        if (logs[index].length > 10) {
+          logs[index].pop();
+        }
+
+        if (index === activeApiIndex) {
+          renderLogs();
+        }
+      }
+
+      // MONITORAMENTO INDIVIDUAL
+      apis.forEach((api, index) => {
+        const delayInicial = index * 1000; // evita tudo ao mesmo tempo
+
+        setTimeout(() => {
+          // primeira execução
+          fazerRequisicao(api, index);
+
+          // loop individual
+          setInterval(() => {
+            fazerRequisicao(api, index);
+          }, api.interval || 15000);
+        }, delayInicial);
+      });
+    </script>
+  </body>
+</html>
